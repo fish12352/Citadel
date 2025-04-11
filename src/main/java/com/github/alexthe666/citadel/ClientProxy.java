@@ -31,7 +31,13 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.BackupConfirmScreen;
 import net.minecraft.client.gui.screens.ConfirmScreen;
-import net.minecraft.client.gui.screens.SkinCustomizationScreen;
+import net.minecraft.client.gui.screens.options.SkinCustomizationScreen;
+import net.neoforged.bus.EventBus;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModLoadingContext;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
@@ -45,16 +51,14 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.PlayerModelPart;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.*;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.Event;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RenderPlayerEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RenderTooltipEvent;
+
 
 import java.awt.*;
 import java.io.IOException;
@@ -62,7 +66,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-@Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ClientProxy extends ServerProxy {
     public static TabulaModel CITADEL_MODEL;
     public static boolean hideFollower = false;
@@ -71,14 +75,14 @@ public class ClientProxy extends ServerProxy {
     private Map<ItemStack, Float> mouseOverProgresses = new HashMap<>();
     private ItemStack lastHoveredItem = null;
     private Tetris aprilFoolsTetrisGame = null;
-    public static final ResourceLocation RAINBOW_AURA_POST_SHADER = new ResourceLocation("citadel:shaders/post/rainbow_aura.json");
+    public static final ResourceLocation RAINBOW_AURA_POST_SHADER = ResourceLocation.tryParse("citadel:shaders/post/rainbow_aura.json");
 
     public ClientProxy() {
         super();
     }
 
     public void onClientInit() {
-        IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+        IEventBus bus = ModLoadingContext.get().getEventBus();
         try {
             CITADEL_MODEL = new TabulaModel(TabulaModelHandler.INSTANCE.loadTabulaModel("/assets/citadel/models/citadel_model"));
         } catch (IOException e) {
@@ -86,9 +90,9 @@ public class ClientProxy extends ServerProxy {
         }
         bus.addListener(this::registerShaders);
         BlockEntityRenderers.register(Citadel.LECTERN_BE.get(), CitadelLecternRenderer::new);
-        CitadelPatreonRenderer.register("citadel", new SpaceStationPatreonRenderer(new ResourceLocation("citadel:patreon_space_station"), new int[]{}));
-        CitadelPatreonRenderer.register("citadel_red", new SpaceStationPatreonRenderer(new ResourceLocation("citadel:patreon_space_station_red"), new int[]{0XB25048, 0X9D4540, 0X7A3631, 0X71302A}));
-        CitadelPatreonRenderer.register("citadel_gray", new SpaceStationPatreonRenderer(new ResourceLocation("citadel:patreon_space_station_gray"), new int[]{0XA0A0A0, 0X888888, 0X646464, 0X575757}));
+        CitadelPatreonRenderer.register("citadel", new SpaceStationPatreonRenderer(new ResourceLocation("citadel", "patreon_space_station"), new int[]{}));
+        CitadelPatreonRenderer.register("citadel_red", new SpaceStationPatreonRenderer(new ResourceLocation("citadel", "patreon_space_station_red"), new int[]{0XB25048, 0X9D4540, 0X7A3631, 0X71302A}));
+        CitadelPatreonRenderer.register("citadel_gray", new SpaceStationPatreonRenderer(new ResourceLocation("citadel", "patreon_space_station_gray"), new int[]{0XA0A0A0, 0X888888, 0X646464, 0X575757}));
         if(CitadelConstants.debugShaders()){
             PostEffectRegistry.registerEffect(RAINBOW_AURA_POST_SHADER);
         }
@@ -136,7 +140,7 @@ public class ClientProxy extends ServerProxy {
     public void playerRender(RenderPlayerEvent.Post event) {
         PoseStack matrixStackIn = event.getPoseStack();
         String username = event.getEntity().getName().getString();
-        if (!event.getEntity().isModelPartShown(PlayerModelPart.CAPE) || event.isCanceled() || event.getEntity().isSpectator()) {
+        if (!event.getEntity().isModelPartShown(PlayerModelPart.CAPE) || event.getEntity().isSpectator()) {
             return;
         }
         if (Citadel.PATREONS.contains(username)) {
@@ -223,12 +227,12 @@ public class ClientProxy extends ServerProxy {
     }
 
         @SubscribeEvent
-    public void clientTick(TickEvent.ClientTickEvent event) {
-        if(event.phase == TickEvent.Phase.START && !isGamePaused() && Minecraft.getInstance().isRunning() && Minecraft.getInstance().level != null && Minecraft.getInstance().player != null){
+    public void clientTick(ClientTickEvent event) {
+        if(event.phase == ClientTickEvent.Phase.START && !isGamePaused() && Minecraft.getInstance().isRunning() && Minecraft.getInstance().level != null && Minecraft.getInstance().player != null){
             ClientTickRateTracker.getForClient(Minecraft.getInstance()).masterTick();
             tickMouseOverAnimations();
         }
-        if(event.type == TickEvent.Type.CLIENT && event.phase == TickEvent.Phase.START && !isGamePaused() && CitadelConstants.isAprilFools()) {
+        if(event.type == ClientTickEvent.Type.CLIENT && event.phase == ClientTickEvent.Phase.START && !isGamePaused() && CitadelConstants.isAprilFools()) {
             if(aprilFoolsTetrisGame != null){
                 if(Minecraft.getInstance().screen instanceof TitleScreen){
                     aprilFoolsTetrisGame.tick();

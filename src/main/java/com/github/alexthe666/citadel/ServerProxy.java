@@ -7,7 +7,6 @@ import com.github.alexthe666.citadel.server.world.CitadelServerData;
 import com.github.alexthe666.citadel.server.world.ModifiableTickRateServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -15,10 +14,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
-@Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = "citadel", bus = EventBusSubscriber.Bus.MOD)
 public class ServerProxy {
 
 
@@ -63,10 +63,11 @@ public class ServerProxy {
             ServerTickRateTracker tickRateTracker = CitadelServerData.get(event.getServer()).getOrCreateTickRateTracker();
             if (event.getServer() instanceof ModifiableTickRateServer modifiableServer) {
                 long l = tickRateTracker.getServerTickLengthMs();
-                if (l == MinecraftServer.MS_PER_TICK) {
+                long defaultTickLength = 50;
+                if (l == defaultTickLength) {
                     modifiableServer.resetGlobalTickLengthMs();
                 } else {
-                    modifiableServer.setGlobalTickLengthMs(tickRateTracker.getServerTickLengthMs());
+                    modifiableServer.setGlobalTickLengthMs(l);
                 }
                 if (!event.getServer().isShutdown()) {
                     tickRateTracker.masterTick();
