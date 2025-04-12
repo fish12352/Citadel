@@ -1,11 +1,17 @@
 package com.github.alexthe666.citadel.client.gui.data;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.nbt.Tag;
 
 public class LinkData {
     private String linked_page;
@@ -66,21 +72,36 @@ public class LinkData {
         this.y = y;
     }
 
-    public ItemStack getDisplayItem() {
-        if(item == null || item.isEmpty()){
+    public ItemStack getDisplayItem(Level level) {
+        if(item == null || item.isEmpty() || level == null){
             return ItemStack.EMPTY;
         }else{
-            ItemStack stack = new ItemStack(ForgeRegistries.ITEMS.getValue(new ResourceLocation(item)));
-            if (item_tag != null && !item_tag.isEmpty()) {
-                CompoundTag tag = null;
-                try {
-                    tag = TagParser.parseTag(item_tag);
-                } catch (CommandSyntaxException e) {
-                    e.printStackTrace();
+            try {
+                ResourceLocation itemLocation = ResourceLocation.tryParse(item);
+                if (itemLocation == null) {
+                    return ItemStack.EMPTY;
                 }
-                stack.setTag(tag);
+                
+                Item mcItem = BuiltInRegistries.ITEM.get(itemLocation);
+                ItemStack stack = new ItemStack(mcItem);
+                
+                if (item_tag != null && !item_tag.isEmpty()) {
+                    CompoundTag tag = TagParser.parseTag(item_tag);
+                    Tag savedTag = stack.save(level.registryAccess());
+                    if (savedTag instanceof CompoundTag savedCompound) {
+                        savedCompound.merge(tag);
+                        return ItemStack.parse(level.registryAccess(), savedCompound).orElse(stack);
+                    }
+                }
+                return stack;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return ItemStack.EMPTY;
             }
-            return stack;
         }
+    }
+
+    public ItemStack getDisplayItem() {
+        return ItemStack.EMPTY;
     }
 }

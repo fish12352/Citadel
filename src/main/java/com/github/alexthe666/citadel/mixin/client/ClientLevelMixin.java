@@ -12,14 +12,16 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.storage.WritableLevelData;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.eventbus.api.Event;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import com.mojang.blaze3d.systems.RenderSystem;
 
 import java.util.function.Supplier;
 
@@ -30,11 +32,12 @@ public abstract class ClientLevelMixin extends Level {
         super(writableLevelData, levelResourceKey, registryAccess, dimensionTypeHolder, filler, b1, b2, seed, i);
     }
 
-    @Inject(at = @At("RETURN"), remap = CitadelConstants.REMAPREFS, method = "Lnet/minecraft/client/multiplayer/ClientLevel;getStarBrightness(F)F", cancellable = true)
-    private void citadel_getStarBrightness(float partialTicks, CallbackInfoReturnable<Float> cir) {
-        EventGetStarBrightness event = new EventGetStarBrightness(((ClientLevel) (Object) this), cir.getReturnValue(), partialTicks);
-        MinecraftForge.EVENT_BUS.post(event);
-        if (event.getResult() == Event.Result.ALLOW) {
+    @Inject(method = "getSkyDarken", at = @At("HEAD"), cancellable = true)
+    private void citadel_onGetStarBrightness(CallbackInfoReturnable<Float> cir) {
+        float currentBrightness = cir.getReturnValue();
+        EventGetStarBrightness event = new EventGetStarBrightness((ClientLevel)(Object)this, currentBrightness, 0.0f);
+        NeoForge.EVENT_BUS.post(event);
+        if (event.isCanceled()) {
             cir.setReturnValue(event.getBrightness());
         }
     }

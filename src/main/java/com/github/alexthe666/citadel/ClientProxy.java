@@ -7,6 +7,7 @@ import com.github.alexthe666.citadel.client.game.Tetris;
 import com.github.alexthe666.citadel.client.gui.GuiCitadelBook;
 import com.github.alexthe666.citadel.client.gui.GuiCitadelCapesConfig;
 import com.github.alexthe666.citadel.client.gui.GuiCitadelPatreonConfig;
+import com.github.alexthe666.citadel.config.CitadelClientConfig;
 import com.github.alexthe666.citadel.client.model.TabulaModel;
 import com.github.alexthe666.citadel.client.model.TabulaModelHandler;
 import com.github.alexthe666.citadel.client.render.CitadelLecternRenderer;
@@ -25,19 +26,12 @@ import com.github.alexthe666.citadel.server.event.EventChangeEntityTickRate;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.BackupConfirmScreen;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.options.SkinCustomizationScreen;
-import net.neoforged.bus.EventBus;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModLoadingContext;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
@@ -53,25 +47,28 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.ModLoadingContext;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.event.RenderPlayerEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderTooltipEvent;
-
-
+import net.neoforged.neoforge.common.NeoForge;
 import java.awt.*;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-@EventBusSubscriber(bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(value = Dist.CLIENT)
 public class ClientProxy extends ServerProxy {
     public static TabulaModel CITADEL_MODEL;
     public static boolean hideFollower = false;
     private Map<ItemStack, Float> prevMouseOverProgresses = new HashMap<>();
-
     private Map<ItemStack, Float> mouseOverProgresses = new HashMap<>();
     private ItemStack lastHoveredItem = null;
     private Tetris aprilFoolsTetrisGame = null;
@@ -79,20 +76,21 @@ public class ClientProxy extends ServerProxy {
 
     public ClientProxy() {
         super();
+        NeoForge.EVENT_BUS.register(this);
     }
 
     public void onClientInit() {
-        IEventBus bus = ModLoadingContext.get().getEventBus();
+        IEventBus modEventBus = ModLoadingContext.get().getActiveContainer().getEventBus();
         try {
             CITADEL_MODEL = new TabulaModel(TabulaModelHandler.INSTANCE.loadTabulaModel("/assets/citadel/models/citadel_model"));
         } catch (IOException e) {
             e.printStackTrace();
         }
-        bus.addListener(this::registerShaders);
+        modEventBus.addListener(this::registerShaders);
         BlockEntityRenderers.register(Citadel.LECTERN_BE.get(), CitadelLecternRenderer::new);
-        CitadelPatreonRenderer.register("citadel", new SpaceStationPatreonRenderer(new ResourceLocation("citadel", "patreon_space_station"), new int[]{}));
-        CitadelPatreonRenderer.register("citadel_red", new SpaceStationPatreonRenderer(new ResourceLocation("citadel", "patreon_space_station_red"), new int[]{0XB25048, 0X9D4540, 0X7A3631, 0X71302A}));
-        CitadelPatreonRenderer.register("citadel_gray", new SpaceStationPatreonRenderer(new ResourceLocation("citadel", "patreon_space_station_gray"), new int[]{0XA0A0A0, 0X888888, 0X646464, 0X575757}));
+        CitadelPatreonRenderer.register("citadel", new SpaceStationPatreonRenderer(ResourceLocation.tryParse("citadel:patreon_space_station"), new int[]{}));
+        CitadelPatreonRenderer.register("citadel_red", new SpaceStationPatreonRenderer(ResourceLocation.tryParse("citadel:patreon_space_station_red"), new int[]{0XB25048, 0X9D4540, 0X7A3631, 0X71302A}));
+        CitadelPatreonRenderer.register("citadel_gray", new SpaceStationPatreonRenderer(ResourceLocation.tryParse("citadel:patreon_space_station_gray"), new int[]{0XA0A0A0, 0X888888, 0X646464, 0X575757}));
         if(CitadelConstants.debugShaders()){
             PostEffectRegistry.registerEffect(RAINBOW_AURA_POST_SHADER);
         }
@@ -167,7 +165,7 @@ public class ClientProxy extends ServerProxy {
 
     private void registerShaders(final RegisterShadersEvent e) {
         try {
-            e.registerShader(new ShaderInstance(e.getResourceProvider(), new ResourceLocation("citadel:rendertype_rainbow_aura"), DefaultVertexFormat.POSITION_COLOR_TEX), CitadelInternalShaders::setRenderTypeRainbowAura);
+            e.registerShader(new ShaderInstance(e.getResourceProvider(), ResourceLocation.tryParse("citadel:rendertype_rainbow_aura"), DefaultVertexFormat.NEW_ENTITY), CitadelInternalShaders::setRenderTypeRainbowAura);
         }catch (Exception exception){
             exception.printStackTrace();
         }
@@ -177,21 +175,18 @@ public class ClientProxy extends ServerProxy {
     public void onOpenGui(ScreenEvent.Opening event) {
         if (ServerConfig.skipWarnings) {
             try{
-                if (event.getScreen() instanceof BackupConfirmScreen) {
-                    BackupConfirmScreen confirmBackupScreen = (BackupConfirmScreen) event.getScreen();
-                    String name = "";
+                if (event.getScreen() instanceof BackupConfirmScreen confirmBackupScreen) {
                     MutableComponent title = Component.translatable("selectWorld.backupQuestion.experimental");
-
                     if (confirmBackupScreen.getTitle().equals(title)) {
-                        confirmBackupScreen.listener.proceed(false, true);
+                        event.setCanceled(true);
+                        Minecraft.getInstance().setScreen(null);
                     }
                 }
-                if (event.getScreen() instanceof ConfirmScreen) {
-                    ConfirmScreen confirmScreen = (ConfirmScreen) event.getScreen();
+                if (event.getScreen() instanceof ConfirmScreen confirmScreen) {
                     MutableComponent title = Component.translatable("selectWorld.backupQuestion.experimental");
-                    String name = "";
                     if (confirmScreen.getTitle().equals(title)) {
-                        confirmScreen.callback.accept(true);
+                        event.setCanceled(true);
+                        Minecraft.getInstance().setScreen(null);
                     }
                 }
             }catch (Exception e){
@@ -203,22 +198,13 @@ public class ClientProxy extends ServerProxy {
 
     @SubscribeEvent
     public void renderSplashTextBefore(EventRenderSplashText.Pre event) {
-        if(CitadelConstants.isAprilFools() && aprilFoolsTetrisGame != null){
-            event.setResult(Event.Result.ALLOW);
-            float hue = (System.currentTimeMillis() % 6000) / 6000f;
-            event.getGuiGraphics().pose().mulPose(Axis.ZP.rotationDegrees((float)Math.sin(hue * Math.PI) * 360));
-            if(!aprilFoolsTetrisGame.isStarted()){
-                event.setSplashText("Psst... press 'T' ;)");
-            }else{
-                event.setSplashText("");
-            }
-            int rainbow = Color.HSBtoRGB(hue, 0.6f, 1);
-            event.setSplashTextColor(rainbow);
+        if (CitadelClientConfig.INSTANCE.removeSplashText.get()) {
+            event.setCanceled(true);
         }
     }
 
     @SubscribeEvent
-    public void onKeyPressed(ScreenEvent.KeyPressed event) {
+    public void onKeyPressed(ScreenEvent.KeyPressed.Pre event) {
         if(Minecraft.getInstance().screen instanceof TitleScreen && aprilFoolsTetrisGame != null && aprilFoolsTetrisGame.isStarted()){
             if(event.getKeyCode() == InputConstants.KEY_LEFT || event.getKeyCode() == InputConstants.KEY_RIGHT || event.getKeyCode() == InputConstants.KEY_DOWN || event.getKeyCode() == InputConstants.KEY_UP){
                 event.setCanceled(true);
@@ -226,13 +212,13 @@ public class ClientProxy extends ServerProxy {
         }
     }
 
-        @SubscribeEvent
+    @SubscribeEvent
     public void clientTick(ClientTickEvent event) {
-        if(event.phase == ClientTickEvent.Phase.START && !isGamePaused() && Minecraft.getInstance().isRunning() && Minecraft.getInstance().level != null && Minecraft.getInstance().player != null){
+        if(!isGamePaused() && Minecraft.getInstance().isRunning() && Minecraft.getInstance().level != null && Minecraft.getInstance().player != null){
             ClientTickRateTracker.getForClient(Minecraft.getInstance()).masterTick();
             tickMouseOverAnimations();
         }
-        if(event.type == ClientTickEvent.Type.CLIENT && event.phase == ClientTickEvent.Phase.START && !isGamePaused() && CitadelConstants.isAprilFools()) {
+        if(!isGamePaused() && CitadelConstants.isAprilFools()) {
             if(aprilFoolsTetrisGame != null){
                 if(Minecraft.getInstance().screen instanceof TitleScreen){
                     aprilFoolsTetrisGame.tick();
@@ -282,19 +268,18 @@ public class ClientProxy extends ServerProxy {
         }
     }
 
-    @Override
-    public float getMouseOverProgress(ItemStack itemStack){
-        float prev = prevMouseOverProgresses.getOrDefault(itemStack, 0F);
-        float current = mouseOverProgresses.getOrDefault(itemStack, 0F);
-        float lerped = prev + (current - prev) * Minecraft.getInstance().getFrameTime();
+    private float getMouseOverProgress() {
+        float prev = prevMouseOverProgresses.getOrDefault(lastHoveredItem, 0F);
+        float current = mouseOverProgresses.getOrDefault(lastHoveredItem, 0F);
+        float lerped = prev + (current - prev) * Minecraft.getInstance().getTimer().getGameTimeDeltaTicks();
         float maxTime = 5F;
-        if(itemStack.getItem() instanceof ItemWithHoverAnimation hoverOver){
-            maxTime = hoverOver.getMaxHoverOverTime(itemStack);
+        if(lastHoveredItem != null && lastHoveredItem.getItem() instanceof ItemWithHoverAnimation hoverOver){
+            maxTime = hoverOver.getMaxHoverOverTime(lastHoveredItem);
         }
         return lerped / maxTime;
     }
 
-        @Override
+    @Override
     public void handleAnimationPacket(int entityId, int index) {
         if (Minecraft.getInstance().level != null) {
             IAnimatedEntity entity = (IAnimatedEntity) Minecraft.getInstance().level.getEntity(entityId);
@@ -350,7 +335,7 @@ public class ClientProxy extends ServerProxy {
             return false;
         }else if(!tracker.hasNormalTickRate(entity)){
             EventChangeEntityTickRate event = new EventChangeEntityTickRate(entity, tracker.getEntityTickLengthModifier(entity));
-            MinecraftForge.EVENT_BUS.post(event);
+            NeoForge.EVENT_BUS.post(event);
             if(event.isCanceled()){
                 return true;
             }else{

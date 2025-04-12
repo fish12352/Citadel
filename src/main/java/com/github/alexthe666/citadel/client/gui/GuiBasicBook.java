@@ -119,7 +119,7 @@ public abstract class GuiBasicBook extends Screen {
         RenderSystem.runAsFancy(() -> {
             VertexConsumer ivertexbuilder = irendertypebuffer$impl.getBuffer(RenderType.entityCutoutNoCull(tex));
             model.resetToDefaultPose();
-            model.renderToBuffer(matrixstack, ivertexbuilder, 15728880, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+            model.renderToBuffer(matrixstack, ivertexbuilder, 15728880, OverlayTexture.NO_OVERLAY);
         });
         Lighting.setupFor3DItems();
     }

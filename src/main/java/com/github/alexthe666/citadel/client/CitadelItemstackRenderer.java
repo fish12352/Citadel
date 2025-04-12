@@ -18,7 +18,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4f;
-
+import net.minecraft.client.renderer.RenderType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +87,6 @@ public class CitadelItemstackRenderer extends BlockEntityWithoutLevelRenderer {
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             RenderSystem.disableCull();
-           // RenderSystem.enableAlphaTest();
             RenderSystem.enableDepthTest();
             Holder<MobEffect> effect;
             //TODO: convert to component system
@@ -112,43 +111,32 @@ public class CitadelItemstackRenderer extends BlockEntityWithoutLevelRenderer {
             poseStack.pushPose();
             poseStack.translate(0, 0, 0.5F);
             TextureAtlasSprite sprite = potionspriteuploader.get(effect);
-            RenderSystem.setShader(GameRenderer::getPositionTexShader);
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+            RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
             RenderSystem.setShaderTexture(0, sprite.atlasLocation());
-            BufferBuilder bufferbuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
-            Matrix4f mx = poseStack.last().pose();
+            
+            MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+            VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.text(sprite.atlasLocation()));
+            Matrix4f matrix = poseStack.last().pose();
+            
             int br = 255;
-            bufferbuilder.addVertex(mx, (float) 1, (float) 1, (float) 0).setUv(sprite.getU1(), sprite.getV0()).setColor(br, br, br, 255).setLight(packedLight);
-            bufferbuilder.addVertex(mx, (float) 0, (float) 1, (float) 0).setUv(sprite.getU0(), sprite.getV0()).setColor(br, br, br, 255).setLight(packedLight);
-            bufferbuilder.addVertex(mx, (float) 0, (float) 0, (float) 0).setUv(sprite.getU0(), sprite.getV1()).setColor(br, br, br, 255).setLight(packedLight);
-            bufferbuilder.addVertex(mx, (float) 1, (float) 0, (float) 0).setUv(sprite.getU1(), sprite.getV1()).setColor(br, br, br, 255).setLight(packedLight);
-            poseStack.popPose();
-        }
-        if (stack.getItem() == Citadel.ICON_ITEM.get()) {
-            ResourceLocation texture = DEFAULT_ICON_TEXTURE;
-            //TODO: convert to component system
-            /*if (stack.getTag() != null && stack.getTag().contains("IconLocation")) {
-                String iconLocationStr = stack.getTag().getString("IconLocation");
-                if(LOADED_ICONS.containsKey(iconLocationStr)){
-                    texture = LOADED_ICONS.get(iconLocationStr);
-                }else{
-                    texture = new ResourceLocation(iconLocationStr);
-                    LOADED_ICONS.put(iconLocationStr, texture);
-                }
-            }*/
-            poseStack.pushPose();
-            poseStack.translate(0, 0, 0.5F);
-            RenderSystem.setShader(GameRenderer::getPositionTexShader);
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-            RenderSystem.setShaderTexture(0, texture);
-            Tesselator tessellator = Tesselator.getInstance();
-            BufferBuilder bufferbuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
-            Matrix4f mx = poseStack.last().pose();
-            int br = 255;
-            bufferbuilder.addVertex(mx, (float) 1, (float) 1, (float) 0).setUv(1, 0).setColor(br, br, br, 255).setLight(packedLight);
-            bufferbuilder.addVertex(mx, (float) 0, (float) 1, (float) 0).setUv(0, 0).setColor(br, br, br, 255).setLight(packedLight);
-            bufferbuilder.addVertex(mx, (float) 0, (float) 0, (float) 0).setUv(0, 1).setColor(br, br, br, 255).setLight(packedLight);
-            bufferbuilder.addVertex(mx, (float) 1, (float) 0, (float) 0).setUv(1, 1).setColor(br, br, br, 255).setLight(packedLight);
+            vertexConsumer.addVertex(matrix, 1.0F, 1.0F, 0.0F)
+                .setUv(sprite.getU1(), sprite.getV0())
+                .setColor(br, br, br, 255)
+                .setNormal(0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix, 0.0F, 1.0F, 0.0F)
+                .setUv(sprite.getU0(), sprite.getV0())
+                .setColor(br, br, br, 255)
+                .setNormal(0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix, 0.0F, 0.0F, 0.0F)
+                .setUv(sprite.getU0(), sprite.getV1())
+                .setColor(br, br, br, 255)
+                .setNormal(0.0F, 1.0F, 0.0F);
+            vertexConsumer.addVertex(matrix, 1.0F, 0.0F, 0.0F)
+                .setUv(sprite.getU1(), sprite.getV1())
+                .setColor(br, br, br, 255)
+                .setNormal(0.0F, 1.0F, 0.0F);
+            
+            bufferSource.endBatch();
             poseStack.popPose();
         }
     }

@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.lang.reflect.Field;
 
 public class ClientTickRateTracker extends TickRateTracker {
     public static final Logger LOGGER = LogManager.getLogger("citadel-client-tick");
@@ -21,6 +22,16 @@ public class ClientTickRateTracker extends TickRateTracker {
     public Minecraft client;
 
     private static float MS_PER_TICK = 50F;
+
+    private static Field msPerTickField;
+    static {
+        try {
+            msPerTickField = DeltaTracker.Timer.class.getDeclaredField("msPerTick");
+            msPerTickField.setAccessible(true);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     public ClientTickRateTracker(Minecraft client) {
         this.client = client;
@@ -44,8 +55,11 @@ public class ClientTickRateTracker extends TickRateTracker {
     public void masterTick(){
         super.masterTick();
         if(client.getTimer() instanceof DeltaTracker.Timer timer){
-            timer.msPerTick = getClientTickRate();
-
+            try {
+                msPerTickField.set(timer, getClientTickRate());
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
         }
     }
 

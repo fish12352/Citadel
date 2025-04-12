@@ -1,5 +1,6 @@
 package com.github.alexthe666.citadel;
 
+import com.github.alexthe666.citadel.config.CitadelClientConfig;
 import com.github.alexthe666.citadel.config.ConfigHolder;
 import com.github.alexthe666.citadel.config.ServerConfig;
 import com.github.alexthe666.citadel.item.ItemCitadelBook;
@@ -95,6 +96,7 @@ public class Citadel {
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(PROXY);
         modContainer.registerConfig(ModConfig.Type.COMMON, ConfigHolder.SERVER_SPEC);
+        modContainer.registerConfig(ModConfig.Type.CLIENT, CitadelClientConfig.INSTANCE.getSpec());
         NeoForge.EVENT_BUS.register(new CitadelEvents());
     }
 

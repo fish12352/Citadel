@@ -8,17 +8,19 @@ import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class EventMergeStructureSpawns extends Event {
+public class EventMergeStructureSpawns extends Event implements ICancellableEvent {
 
     private StructureManager structureManager;
     private BlockPos pos;
     private MobCategory category;
     private WeightedRandomList<MobSpawnSettings.SpawnerData> structureSpawns;
     private WeightedRandomList<MobSpawnSettings.SpawnerData> biomeSpawns;
+    private boolean cancelled = false;
 
     public EventMergeStructureSpawns(StructureManager structureManager, BlockPos pos, MobCategory category, WeightedRandomList<MobSpawnSettings.SpawnerData> structureSpawns, WeightedRandomList<MobSpawnSettings.SpawnerData> biomeSpawns) {
         this.structureManager = structureManager;
@@ -64,5 +66,15 @@ public class EventMergeStructureSpawns extends Event {
 
     public WeightedRandomList<MobSpawnSettings.SpawnerData> getBiomeSpawns() {
         return biomeSpawns;
+    }
+
+    @Override
+    public boolean isCanceled() {
+        return cancelled;
+    }
+
+    @Override
+    public void setCanceled(boolean cancel) {
+        this.cancelled = cancel;
     }
 }

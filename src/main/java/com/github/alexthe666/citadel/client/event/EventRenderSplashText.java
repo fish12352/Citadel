@@ -2,12 +2,13 @@ package com.github.alexthe666.citadel.client.event;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
 
-public class EventRenderSplashText extends Event {
+public class EventRenderSplashText extends Event implements ICancellableEvent {
     private String splashText;
-
     private GuiGraphics guiGraphics;
     private float partialTicks;
+    protected boolean isAllowed = false;
 
     public EventRenderSplashText(String splashText, GuiGraphics guiGraphics, float partialTicks) {
         this.splashText = splashText;
@@ -21,6 +22,7 @@ public class EventRenderSplashText extends Event {
 
     public void setSplashText(String splashText) {
         this.splashText = splashText;
+        this.isAllowed = true;
     }
 
     public float getPartialTicks() {
@@ -31,8 +33,11 @@ public class EventRenderSplashText extends Event {
         return guiGraphics;
     }
 
-    public static class Pre extends EventRenderSplashText {
+    public boolean isAllowed() {
+        return isAllowed;
+    }
 
+    public static class Pre extends EventRenderSplashText {
         private int splashTextColor;
 
         public Pre(String splashText, GuiGraphics guiGraphics, float partialTicks, int splashTextColor) {
@@ -46,14 +51,13 @@ public class EventRenderSplashText extends Event {
 
         public void setSplashTextColor(int splashTextColor) {
             this.splashTextColor = splashTextColor;
+            this.isAllowed = true;
         }
     }
 
     public static class Post extends EventRenderSplashText {
-
         public Post(String splashText, GuiGraphics guiGraphics, float partialTicks) {
             super(splashText, guiGraphics, partialTicks);
         }
     }
-
 }

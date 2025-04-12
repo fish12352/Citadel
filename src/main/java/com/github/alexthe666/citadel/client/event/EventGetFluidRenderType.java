@@ -10,6 +10,7 @@ import net.neoforged.bus.api.Event;
 public class EventGetFluidRenderType extends Event {
     private FluidState fluidState;
     private RenderType renderType;
+    private Result result = Result.DEFAULT;
 
     public EventGetFluidRenderType(FluidState fluidState, RenderType renderType) {
         this.fluidState = fluidState;
@@ -26,5 +27,19 @@ public class EventGetFluidRenderType extends Event {
 
     public void setRenderType(RenderType renderType) {
         this.renderType = renderType;
+    }
+
+    public Result getResult() {
+        return result;
+    }
+
+    public void setResult(Result result) {
+        this.result = result;
+    }
+
+    public enum Result {
+        ALLOW,
+        DENY,
+        DEFAULT
     }
 }

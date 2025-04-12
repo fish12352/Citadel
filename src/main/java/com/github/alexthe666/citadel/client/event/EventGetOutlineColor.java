@@ -1,11 +1,14 @@
 package com.github.alexthe666.citadel.client.event;
 
 import net.minecraft.world.entity.Entity;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
 
-public class EventGetOutlineColor extends Event {
+public class EventGetOutlineColor extends Event implements ICancellableEvent {
     private Entity entityIn;
     private int color;
+    private boolean isAllowed = false;
 
     public EventGetOutlineColor(Entity entityIn, int color) {
         this.entityIn = entityIn;
@@ -26,7 +29,10 @@ public class EventGetOutlineColor extends Event {
 
     public void setColor(int color) {
         this.color = color;
+        this.isAllowed = true;
     }
-
-
+    
+    public boolean isAllowed() {
+        return this.isAllowed;
+    }
 }

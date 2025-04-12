@@ -2,7 +2,7 @@ package com.github.alexthe666.citadel.client.video;
 
 import com.github.alexthe666.citadel.client.texture.VideoFrameTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.fml.loading.FMLPaths;
+import net.neoforged.fml.loading.FMLPaths;
 import net.sourceforge.jaad.spi.javasound.AACAudioFileReader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -123,15 +123,15 @@ public class Video {
     }
 
     private void setupAudio(File mp4File, long time) {
-        AACAudioFileReader aacAudioFileReader = new AACAudioFileReader();
         try {
-            AudioInputStream audioInputStream = aacAudioFileReader.getAudioInputStream(mp4File);
+            AACAudioFileReader aacReader = new AACAudioFileReader();
+            AudioInputStream audioInputStream = aacReader.getAudioInputStream(mp4File);
+            
             audioClip = AudioSystem.getClip();
-
             audioClip.open(audioInputStream);
-
             audioClip.setMicrosecondPosition(time);
             audioClip.start();
+            
             if(!hasAudioLoaded){
                 LOGGER.info("loaded mp4 audio from " + url);
             }

@@ -24,7 +24,7 @@ public class SmithingMenuMixin {
     )
     private List<SmithingRecipe> citadel_getRecipesFor(RecipeManager recipeManager, RecipeType<SmithingRecipe> type, Container container, Level level) {
         List<SmithingRecipe> list = new ArrayList<>();
-        list.addAll(recipeManager.getRecipesFor(type, container, level));
+        recipeManager.getAllRecipesFor(type).forEach(holder -> list.add(holder.value()));
         if(type == RecipeType.SMITHING && container.getContainerSize() >= 2 && !container.getItem(0).isEmpty()&& !container.getItem(1).isEmpty()){
             list.addAll(CitadelRecipes.getSmithingRecipes());
         }
