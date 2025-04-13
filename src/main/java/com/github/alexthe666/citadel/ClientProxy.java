@@ -3,6 +3,11 @@ package com.github.alexthe666.citadel;
 import com.github.alexthe666.citadel.animation.IAnimatedEntity;
 import com.github.alexthe666.citadel.client.CitadelItemRenderProperties;
 import com.github.alexthe666.citadel.client.event.EventRenderSplashText;
+import com.github.alexthe666.citadel.client.event.EventPosePlayerHand;
+import com.github.alexthe666.citadel.client.event.EventGetOutlineColor;
+import com.github.alexthe666.citadel.client.event.EventGetStarBrightness;
+import com.github.alexthe666.citadel.client.event.EventLivingRenderer;
+import com.github.alexthe666.citadel.client.event.EventGetFluidRenderType;
 import com.github.alexthe666.citadel.client.game.Tetris;
 import com.github.alexthe666.citadel.client.gui.GuiCitadelBook;
 import com.github.alexthe666.citadel.client.gui.GuiCitadelCapesConfig;
@@ -50,7 +55,9 @@ import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.ModLoadingContext;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
@@ -64,7 +71,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-@EventBusSubscriber(value = Dist.CLIENT)
+@EventBusSubscriber(value = Dist.CLIENT, modid = "citadel", bus = EventBusSubscriber.Bus.MOD)
 public class ClientProxy extends ServerProxy {
     public static TabulaModel CITADEL_MODEL;
     public static boolean hideFollower = false;
@@ -77,15 +84,18 @@ public class ClientProxy extends ServerProxy {
     public ClientProxy() {
         super();
         NeoForge.EVENT_BUS.register(this);
-    }
-
-    public void onClientInit() {
-        IEventBus modEventBus = ModLoadingContext.get().getActiveContainer().getEventBus();
+        if (Dist.CLIENT.isDedicatedServer()) {
+            NeoForge.EVENT_BUS.register(this);
+        }
         try {
             CITADEL_MODEL = new TabulaModel(TabulaModelHandler.INSTANCE.loadTabulaModel("/assets/citadel/models/citadel_model"));
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void onClientInit() {
+        IEventBus modEventBus = ModLoadingContext.get().getActiveContainer().getEventBus();
         modEventBus.addListener(this::registerShaders);
         BlockEntityRenderers.register(Citadel.LECTERN_BE.get(), CitadelLecternRenderer::new);
         CitadelPatreonRenderer.register("citadel", new SpaceStationPatreonRenderer(ResourceLocation.tryParse("citadel:patreon_space_station"), new int[]{}));
@@ -98,7 +108,7 @@ public class ClientProxy extends ServerProxy {
 
 
     @SubscribeEvent
-    public void screenOpen(ScreenEvent.Init event) {
+    public static void screenOpen(ScreenEvent.Init event) {
         if (event.getScreen() instanceof SkinCustomizationScreen && Minecraft.getInstance().player != null) {
            try{
                String username = Minecraft.getInstance().player.getName().getString();
@@ -135,7 +145,7 @@ public class ClientProxy extends ServerProxy {
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public void playerRender(RenderPlayerEvent.Post event) {
+    public static void playerRender(RenderPlayerEvent.Post event) {
         PoseStack matrixStackIn = event.getPoseStack();
         String username = event.getEntity().getName().getString();
         if (!event.getEntity().isModelPartShown(PlayerModelPart.CAPE) || event.getEntity().isSpectator()) {
@@ -172,7 +182,7 @@ public class ClientProxy extends ServerProxy {
     }
 
     @SubscribeEvent
-    public void onOpenGui(ScreenEvent.Opening event) {
+    public static void onOpenGui(ScreenEvent.Opening event) {
         if (ServerConfig.skipWarnings) {
             try{
                 if (event.getScreen() instanceof BackupConfirmScreen confirmBackupScreen) {
@@ -198,7 +208,7 @@ public class ClientProxy extends ServerProxy {
 
     @SubscribeEvent
     public void renderSplashTextBefore(EventRenderSplashText.Pre event) {
-        if (CitadelClientConfig.INSTANCE.removeSplashText.get()) {
+        if (!CitadelClientConfig.INSTANCE.enableSplashText.get() || CitadelClientConfig.INSTANCE.removeSplashText.get()) {
             event.setCanceled(true);
         }
     }
@@ -325,24 +335,13 @@ public class ClientProxy extends ServerProxy {
         return Minecraft.getInstance().isPaused();
     }
 
+    @Override
     public Player getClientSidePlayer() {
         return Minecraft.getInstance().player;
     }
 
+    @Override
     public boolean canEntityTickClient(Level level, Entity entity) {
-        ClientTickRateTracker tracker = ClientTickRateTracker.getForClient(Minecraft.getInstance());
-        if(tracker.isTickingHandled(entity)){
-            return false;
-        }else if(!tracker.hasNormalTickRate(entity)){
-            EventChangeEntityTickRate event = new EventChangeEntityTickRate(entity, tracker.getEntityTickLengthModifier(entity));
-            NeoForge.EVENT_BUS.post(event);
-            if(event.isCanceled()){
-                return true;
-            }else{
-                tracker.addTickBlockedEntity(entity);
-                return false;
-            }
-        }
         return true;
     }
 
